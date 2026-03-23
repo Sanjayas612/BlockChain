@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VectorFlow — Blockchain Workshop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050508;
+            --bg-accent: #0a0a14;
+            --cyan: #00f5ff;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+            --pink: #f000b8;
+            --text: #e0e8ff;
+            --muted: #8b9bb4;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(0, 245, 255, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* --- BACKGROUND CANVAS --- */
+        #bg-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- NAV & LOGOS --- */
+        nav {
+            position: fixed;
+            top: 0; width: 100%;
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(5, 5, 8, 0.85);
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .nav-logo {
+            height: 55px;
+            width: auto;
+            object-fit: contain;
+            border-radius: 5px;
+            filter: drop-shadow(0 0 5px rgba(0, 245, 255, 0.2));
+        }
+
+        /* --- UTILITIES --- */
+        .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s ease-out; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* --- HERO --- */
+        #hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0 5%;
+        }
+
+        .hero-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--cyan);
+            border: 1px solid var(--cyan);
+            padding: 5px 15px;
+            border-radius: 100px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: rgba(0, 245, 255, 0.05);
+            animation: pulse 2s infinite;
+        }
+
+        .hero-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 15px;
+        }
+
+        .hero-title span {
+            display: block;
+            background: linear-gradient(135deg, #fff 30%, var(--cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-glow {
+            padding: 18px 45px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #000;
+            background: var(--cyan);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.3s;
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.4);
+        }
+
+        .btn-glow:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(0, 245, 255, 0.7); background: #fff; }
+
+        /* --- CARDS & GRID --- */
+        section { padding: 100px 10%; }
+        .section-header { text-align: center; margin-bottom: 60px; }
+        .section-header h2 { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; }
+        .glass-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            transition: 0.4s;
+        }
+
+        /* --- REGISTRATION --- */
+        .reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .reg-card { display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+        .reg-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--cyan); }
+        .reg-card.others::before { background: var(--purple); }
+        .seat-badge { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin: 20px 0; border: 1px dashed rgba(255,255,255,0.2); }
+        .seat-count { display: block; font-size: 2rem; font-weight: 800; color: #fff; }
+
+        /* --- DASHBOARD TABLE --- */
+        #selection-dashboard { background: rgba(10, 10, 20, 0.5); }
+        .status-table { width: 100%; border-collapse: collapse; margin-top: 30px; font-family: 'JetBrains Mono', monospace; color: var(--text); }
+        .status-table th { text-align: left; padding: 15px; border-bottom: 2px solid var(--cyan); color: var(--cyan); text-transform: uppercase; font-size: 0.8rem; }
+        .status-table td { padding: 15px; border-bottom: 1px solid var(--glass-border); font-size: 0.9rem; }
+        .tag-confirmed { color: #00ff88; font-weight: bold; font-size: 0.75rem; border: 1px solid #00ff88; padding: 2px 8px; border-radius: 4px; }
+
+        /* --- FOOTER & CONTACT --- */
+        footer { padding: 80px 10% 40px; border-top: 1px solid var(--glass-border); background: #020205; }
+        .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; }
+        .contact-card h4 { font-family: 'Orbitron'; color: var(--cyan); margin-bottom: 20px; letter-spacing: 1px; }
+        .contact-item { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .contact-item span { color: var(--muted); font-family: 'JetBrains Mono'; font-size: 0.9rem; }
+        .contact-item a { color: var(--cyan); text-decoration: none; }
+
+        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+        @media (max-width: 850px) { .reg-grid, .footer-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<nav>
+    <img src="vectorflow.jpeg" alt="VectorFlow Logo" class="nav-logo">
+    <img src="dept .jpeg" alt="AI & ML Dept Logo" class="nav-logo">
+</nav>
+
+<section id="hero">
+    <div class="hero-badge">Blockchain Workshop · VVCE</div>
+    <h1 class="hero-title"><span>BLOCKCHAIN</span> WORKSHOP</h1>
+    <p class="hero-tagline">Step into the future of decentralized technology. Hosted by VectorFlow Club.</p>
+    <a href="#register" class="btn-glow">REGISTER NOW</a>
+</section>
+
+<section id="register">
+    <div class="section-header reveal">
+        <h2>SECURE YOUR <span>SLOT</span></h2>
+        <p>Choose your department's track to join.</p>
+    </div>
+
+    <div class="reg-grid">
+        <div class="glass-card reg-card reveal">
+            <div>
+                <span style="font-family: 'JetBrains Mono'; color: var(--cyan);">// AI_ML_SPECIALIZED</span>
+                <h3 style="font-family: 'Orbitron'; margin: 15px 0;">AI & ML Students</h3>
+                <p style="font-size: 0.9rem; color: var(--muted);">For 1st & 2nd Year AI & ML students. Strict section-wise selection (10 per section).</p>
+                <div class="seat-badge">
+                    <span class="seat-count">60 SEATS</span>
+                    <p style="font-size: 0.75rem; margin-top: 5px; opacity: 0.8;">Section A, B, C | 2nd & 4th Semesters</p>
+                </div>
+            </div>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSdWGVCHRbTJwIwsKRLp78ikt2l4T4BH_ZNNTvRxwRGkiNY9iw/viewform?usp=publish-editor" target="_blank" class="btn-glow" style="text-align: center;">Register (AI & ML)</a>
+        </div>
+
+        <div class="glass-card reg-card others reveal">
+            <div>
+                <span style="font-family: 'JetBrains Mono'; color: var(--purple);">// GLOBAL_OPEN_TRACK</span>
+                <h3 style="font-family: 'Orbitron'; margin: 15px 0;">Other Branches</h3>
+                <p style="font-size: 0.9rem; color: var(--muted);">CSE, ISE, ECE, EEE, Civil. Limited to the first 40 applicants.</p>
+                <div class="seat-badge" style="border-color: rgba(168, 85, 247, 0.3);">
+                    <span class="seat-count" style="color: var(--purple);">40 SEATS</span>
+                    <p style="font-size: 0.75rem; margin-top: 5px; opacity: 0.8;">No branch restriction | First-come basis| 2nd & 4th Semesters</p>
+                </div>
+            </div>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSe3Fkqbvc36is55E-AEaoFQ8KsGV_8EZ7j-TNG_UjQGbMqR_w/viewform?usp=publish-editor" target="_blank" class="btn-glow" style="text-align: center; background: var(--purple); box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);">Register (Others)</a>
+        </div>
+    </div>
+</section>
+
+<section id="selection-dashboard">
+    <div class="section-header reveal">
+        <h2>CONFIRMED <span>STUDENTS</span></h2>
+        <p style="color: #8b9bb4; font-size: 0.9rem; margin-top: 10px;">Confirmed participants for the workshop (85 total slots).</p>
+    </div>
+    
+    <div class="glass-card reveal" style="max-width: 900px; margin: 0 auto; padding: 20px;">
+        <div style="overflow-x: auto;">
+            <table class="status-table">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Branch/Section</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="student-list">
+                    <tr><td colspan="3" style="text-align: center; opacity: 0.5;">Syncing confirmed list...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section id="reserve-dashboard">
+    <div class="section-header reveal">
+        <h2>RESERVE <span>LIST</span></h2>
+        <p style="color: #8b9bb4; font-size: 0.9rem; margin-top: 10px;">Top 10 AI&ML candidates on standby if slots open up.</p>
+    </div>
+    
+    <div class="glass-card reveal" style="max-width: 900px; margin: 0 auto; padding: 20px; border-color: var(--purple);">
+        <div style="overflow-x: auto;">
+            <table class="status-table">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Branch/Section</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="reserve-list">
+                    <tr><td colspan="3" style="text-align: center; opacity: 0.5;">Syncing reserve list...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-grid">
+        <div class="contact-card">
+            <h4>CONTACT US</h4>
+            <div class="contact-item">
+                <span>Phone:</span>
+                <a href="tel:+916360975772">+91 6360975772</a>
+            </div>
+            <div class="contact-item">
+                <span>Email:</span>
+                <a href="mailto:vvce24cseaiml0002@vvce.ac.in">vvce24cseaiml0002@vvce.ac.in</a>
+            </div>
+        </div>
+        <div style="text-align: right; display: flex; flex-direction: column; justify-content: center;">
+            <p style="font-family: 'Orbitron'; font-size: 1.2rem; color: var(--cyan);">VECTORFLOW</p>
+            <p style="font-size: 0.8rem; color: var(--muted);">VVCE · Dept. of AI & ML</p>
+        </div>
+    </div>
+    <div style="margin-top: 50px; text-align: center; font-family: 'JetBrains Mono'; font-size: 0.7rem; opacity: 0.4;">
+        © 2026 VectorFlow Club · Blockchain Workshop Initialized
+    </div>
+</footer>
+
+<script>
+    // --- BACKGROUND ANIMATION ---
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let width, height;
+
+    function initCanvas() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+        particles = [];
+        for (let i = 0; i < 80; i++) particles.push(new Particle());
+    }
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * width;
+            this.y = Math.random() * height;
+            this.size = Math.random() * 2;
+            this.speedX = Math.random() * 0.4 - 0.2;
+            this.speedY = Math.random() * 0.4 - 0.2;
+        }
+        update() {
+            this.x += this.speedX; this.y += this.speedY;
+            if (this.x > width) this.x = 0; if (this.x < 0) this.x = width;
+            if (this.y > height) this.y = 0; if (this.y < 0) this.y = height;
+        }
+        draw() {
+            ctx.fillStyle = 'rgba(0, 245, 255, 0.2)';
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+        particles.forEach(p => { p.update(); p.draw(); });
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', initCanvas);
+    initCanvas(); animate();
+
+    // --- REAL-TIME SELECTION LOGIC ---
+    // User Provided Web App URLs
+    const URL_AIML = "https://script.google.com/macros/s/AKfycbzrKh2BoCTp0_CEF3n01bxemDzEijeE-h3h_3prxnYVCq50W2jhXk02vrb8ScktY_0/exec"; 
+    const URL_OTHERS = "https://script.google.com/macros/s/AKfycbzDhyzNhNsQARBAXN-fkVgOJRkD136rro6594UOZnYOed8ln7y9GIo5dhxB5c5NjUFA/exec";
+
+    // Add your official WhatsApp Group Invite Link here
+const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/FKQ2ZXtS6YK9YB6d9HSw1l";
+
+async function fetchDashboard() {
+    const selectedContainer = document.getElementById('student-list');
+    const reserveContainer = document.getElementById('reserve-list');
+    
+    try {
+        const [resAiml, resOthers] = await Promise.all([
+            fetch(URL_AIML).then(r => r.json()),
+            fetch(URL_OTHERS).then(r => r.json())
+        ]);
+
+        const allConfirmed = [...resAiml.confirmed, ...resOthers.confirmed];
+        const allReserved = [...resAiml.reserved, ...resOthers.reserved];
+
+        // Update Confirmed Students Table
+        if (allConfirmed.length === 0) {
+            selectedContainer.innerHTML = '<tr><td colspan="3" style="text-align: center;">Waiting for responses...</td></tr>';
+        } else {
+            selectedContainer.innerHTML = allConfirmed.map(s => `
+                <tr>
+                    <td>${s.name}</td>
+                    <td>${s.branch}</td>
+                    <td><a href="${WHATSAPP_GROUP_LINK}" target="_blank" class="tag-confirmed" style="text-decoration:none; cursor:pointer;">JOIN GROUP</a></td>
+                </tr>`).join('');
+        }
+
+        // Update Reserve Students Table (No join link for waitlisted students)
+        if (allReserved.length === 0) {
+            reserveContainer.innerHTML = '<tr><td colspan="3" style="text-align: center;">Waitlist is empty.</td></tr>';
+        } else {
+            reserveContainer.innerHTML = allReserved.slice(0, 15).map(s => `
+                <tr>
+                    <td>${s.name}</td>
+                    <td>${s.branch}</td>
+                    <td><span class="tag-confirmed" style="border-color: var(--purple); color: var(--purple);">WAITLIST</span></td>
+                </tr>`).join('');
+        }
+
+    } catch (e) {
+        console.error("Sync Error:", e);
+        selectedContainer.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #ff4444;">Dashboard Error. Check script deployment.</td></tr>';
+    }
+}
+
+    // Run fetch on load and refresh every 60 seconds
+    fetchDashboard();
+    setInterval(fetchDashboard, 60000);
+
+    // --- SCROLL REVEAL TRIGGER ---
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+
+    async function fetchDashboard() {
+    const selectedContainer = document.getElementById('student-list');
+    const reserveContainer = document.getElementById('reserve-list');
+    
+    try {
+        const [resAiml, resOthers] = await Promise.all([
+            fetch(URL_AIML).then(r => r.json()),
+            fetch(URL_OTHERS).then(r => r.json())
+        ]);
+
+        // Merge Confirmed lists (Target: 85)
+        const allConfirmed = [...resAiml.confirmed, ...resOthers.confirmed];
+        
+        // Merge Reserve lists
+        const allReserved = [...resAiml.reserved, ...resOthers.reserved];
+
+        // 1. CONFIRMED STUDENTS Table
+        if (allConfirmed.length === 0) {
+            selectedContainer.innerHTML = '<tr><td colspan="3" style="text-align: center;">Waiting for valid registrations...</td></tr>';
+        } else {
+            selectedContainer.innerHTML = allConfirmed.map(s => `
+                <tr>
+                    <td>${s.name}</td>
+                    <td>${s.branch}</td>
+                    <td><span class="tag-confirmed">CONFIRMED</span></td>
+                </tr>`).join('');
+        }
+
+        // 2. RESERVE LIST Table
+        if (allReserved.length === 0) {
+            reserveContainer.innerHTML = '<tr><td colspan="3" style="text-align: center;">No students in queue.</td></tr>';
+        } else {
+            reserveContainer.innerHTML = allReserved.map(s => `
+                <tr>
+                    <td>${s.name}</td>
+                    <td>${s.branch}</td>
+                    <td><span class="tag-confirmed" style="border-color: var(--purple); color: var(--purple);">WAITLIST</span></td>
+                </tr>`).join('');
+        }
+
+    } catch (e) {
+        console.error("Sync Error:", e);
+        selectedContainer.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #ff4444;">Dashboard Sync Error.</td></tr>';
+    }
+}
+
+
+
+</script>
+
+</body>
+</html>
